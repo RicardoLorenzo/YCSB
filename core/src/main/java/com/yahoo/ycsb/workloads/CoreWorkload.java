@@ -427,7 +427,12 @@ public class CoreWorkload extends Workload
 
 	}
 
-	public String buildKeyName(long keynum) {
+    @Override
+    public Object initThread(Properties p, int mythreadid, int threadcount) throws WorkloadException {
+        return new State();
+    }
+
+    public String buildKeyName(long keynum) {
  		if (!orderedinserts)
  		{
  			keynum=Utils.hash(keynum);
@@ -482,11 +487,13 @@ public class CoreWorkload extends Workload
 	 * other, and it will be difficult to reach the target throughput. Ideally, this function would have no side
 	 * effects other than DB operations.
 	 */
-	public boolean doTransaction(DB db, Object threadstate, int opsDone, int nOps)
+	public boolean doTransaction(DB db, Object threadstate, int nOps)
 	{
 		String op=operationchooser.nextString();
 
-        if (bulkOperations > 0 && opsDone % bulkOperations == 0) {
+        State state = (State)threadstate;
+
+        if (bulkOperations > 0 && state.writeOpsDone % bulkOperations == 0) {
             db.initBulkOperations();
         }
 
@@ -497,10 +504,12 @@ public class CoreWorkload extends Workload
 		else if (op.compareTo("UPDATE")==0)
 		{
 			doTransactionUpdate(db);
-		}
+            state.writeOpsDone++;
+        }
 		else if (op.compareTo("INSERT")==0)
 		{
 			doTransactionInsert(db);
+            state.writeOpsDone++;
 		}
 		else if (op.compareTo("SCAN")==0)
 		{
@@ -509,17 +518,15 @@ public class CoreWorkload extends Workload
 		else
 		{
 			doTransactionReadModifyWrite(db);
-		}
+            state.writeOpsDone++;
+        }
+        state.totalOpsDone++;
 
         if (bulkOperations > 0) {
-            int bucket = opsDone / bulkOperations;
+            int bucket = state.writeOpsDone / bulkOperations;
             int commitAt = (bucket + 1) * bulkOperations;
-            // make sure we cap the max number of operations to ensure we get a final commit
-            if (nOps > 0 && commitAt > nOps) commitAt = nOps;
 
-            opsDone++;
-
-            if (opsDone == commitAt) {
+            if (state.writeOpsDone == commitAt || state.totalOpsDone == nOps) {
                 db.commitBulkOperations();
             }
         }
@@ -658,4 +665,9 @@ public class CoreWorkload extends Workload
         HashMap<String, ByteIterator> values = buildValues();
         db.insert(table, dbkey, values);
 	}
+
+    private class State {
+        public int writeOpsDone = 0;
+        public int totalOpsDone = 0;
+    }
 }

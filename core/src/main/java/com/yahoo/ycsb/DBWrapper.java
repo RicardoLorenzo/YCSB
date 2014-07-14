@@ -68,10 +68,10 @@ public class DBWrapper extends DB
 	 */
 	public void cleanup() throws DBException
 	{
-    long st=System.nanoTime();
-	_db.cleanup();
-    long en=System.nanoTime();
-    _measurements.measure("CLEANUP", (int) ((en - st) / 1000));
+        long st=System.nanoTime();
+        _db.cleanup();
+        long en=System.nanoTime();
+        _measurements.measure("CLEANUP", (int) ((en - st) / 1000));
 	}
 
 	/**
@@ -86,16 +86,11 @@ public class DBWrapper extends DB
 	public int read(String table, String key, Set<String> fields, HashMap<String,ByteIterator> result)
 	{
         int res;
-        if (!_db.isBulkOperations()) {
-            long st = System.nanoTime();
-            res = _db.read(table, key, fields, result);
-            long en = System.nanoTime();
-            _measurements.measure("READ", (int) ((en - st) / 1000));
-            _measurements.reportReturnCode("READ", res);
-        } else {
-            res = _db.read(table, key, fields, result);
-        }
-        _ops.add("READ");
+        long st = System.nanoTime();
+        res = _db.read(table, key, fields, result);
+        long en = System.nanoTime();
+        _measurements.measure("READ", (int) ((en - st) / 1000));
+        _measurements.reportReturnCode("READ", res);
         return res;
 	}
 
@@ -112,16 +107,11 @@ public class DBWrapper extends DB
 	public int scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String,ByteIterator>> result)
 	{
         int res;
-        if (!_db.isBulkOperations()) {
-            long st = System.nanoTime();
-            res = _db.scan(table, startkey, recordcount, fields, result);
-            long en = System.nanoTime();
-            _measurements.measure("SCAN", (int) ((en - st) / 1000));
-            _measurements.reportReturnCode("SCAN", res);
-        } else {
-            res = _db.scan(table, startkey, recordcount, fields, result);
-        }
-        _ops.add("SCAN");
+        long st = System.nanoTime();
+        res = _db.scan(table, startkey, recordcount, fields, result);
+        long en = System.nanoTime();
+        _measurements.measure("SCAN", (int) ((en - st) / 1000));
+        _measurements.reportReturnCode("SCAN", res);
         return res;
 	}
 	
@@ -214,19 +204,11 @@ public class DBWrapper extends DB
         long st = System.nanoTime();
         int opsCompleted = _db.commitBulkOperations();
         long en = System.nanoTime();
-        if (opsCompleted > 0) {
-            int timePerOp = Double.valueOf(((en - st) / 1000.0) / opsCompleted).intValue();
-            if (opsCompleted == _ops.size()) {
-                for (String op : _ops) {
-                    _measurements.measure(op, timePerOp);
-                    _measurements.reportReturnCode(op, 0);
-                }
-            } else {
-                for (String op : _ops) {
-                    _measurements.measure("UNKNOWN-BULK-OP", timePerOp);
-                    _measurements.reportReturnCode(op, 0);
-                }
-            }
+        long delta = en - st;
+        int timePerOp = Double.valueOf(delta / _ops.size()).intValue();
+        for (String op : _ops) {
+            _measurements.measure(op, timePerOp);
+            _measurements.reportReturnCode(op, 0);
         }
         _ops.clear();
         return opsCompleted;
