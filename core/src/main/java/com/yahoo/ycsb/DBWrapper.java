@@ -17,10 +17,7 @@
 
 package com.yahoo.ycsb;
 
-import java.util.HashMap;
-import java.util.Properties;
-import java.util.Set;
-import java.util.Vector;
+import java.util.*;
 
 import com.yahoo.ycsb.measurements.Measurements;
 
@@ -31,11 +28,13 @@ public class DBWrapper extends DB
 {
 	DB _db;
 	Measurements _measurements;
+    List<String> _ops;
 
 	public DBWrapper(DB db)
 	{
 		_db=db;
 		_measurements=Measurements.getMeasurements();
+        _ops = new ArrayList<String>();
 	}
 
 	/**
@@ -70,7 +69,7 @@ public class DBWrapper extends DB
 	public void cleanup() throws DBException
 	{
     long st=System.nanoTime();
-		_db.cleanup();
+	_db.cleanup();
     long en=System.nanoTime();
     _measurements.measure("CLEANUP", (int)((en-st)/1000));
 	}
@@ -86,12 +85,18 @@ public class DBWrapper extends DB
 	 */
 	public int read(String table, String key, Set<String> fields, HashMap<String,ByteIterator> result)
 	{
-		long st=System.nanoTime();
-		int res=_db.read(table,key,fields,result);
-		long en=System.nanoTime();
-		_measurements.measure("READ",(int)((en-st)/1000));
-		_measurements.reportReturnCode("READ",res);
-		return res;
+        int res;
+        if (!_db.isBulkOperations()) {
+            long st = System.nanoTime();
+            res = _db.read(table, key, fields, result);
+            long en = System.nanoTime();
+            _measurements.measure("READ", (int) ((en - st) / 1000));
+            _measurements.reportReturnCode("READ", res);
+        } else {
+            res = _db.read(table, key, fields, result);
+        }
+        _ops.add("READ");
+        return res;
 	}
 
 	/**
@@ -106,12 +111,18 @@ public class DBWrapper extends DB
 	 */
 	public int scan(String table, String startkey, int recordcount, Set<String> fields, Vector<HashMap<String,ByteIterator>> result)
 	{
-		long st=System.nanoTime();
-		int res=_db.scan(table,startkey,recordcount,fields,result);
-		long en=System.nanoTime();
-		_measurements.measure("SCAN",(int)((en-st)/1000));
-		_measurements.reportReturnCode("SCAN",res);
-		return res;
+        int res;
+        if (!_db.isBulkOperations()) {
+            long st = System.nanoTime();
+            res = _db.scan(table, startkey, recordcount, fields, result);
+            long en = System.nanoTime();
+            _measurements.measure("SCAN", (int) ((en - st) / 1000));
+            _measurements.reportReturnCode("SCAN", res);
+        } else {
+            res = _db.scan(table, startkey, recordcount, fields, result);
+        }
+        _ops.add("SCAN");
+        return res;
 	}
 	
 	/**
@@ -135,6 +146,7 @@ public class DBWrapper extends DB
         } else {
             res = _db.update(table, key, values);
         }
+        _ops.add("UPDATE");
 		return res;
 	}
 
@@ -160,6 +172,7 @@ public class DBWrapper extends DB
         } else {
             res = _db.insert(table, key, values);
         }
+        _ops.add("INSERT");
 		return res;
 	}
 
@@ -182,6 +195,7 @@ public class DBWrapper extends DB
         } else {
             res = _db.delete(table, key);
         }
+        _ops.add("DELETE");
 		return res;
 	}
 
@@ -198,13 +212,17 @@ public class DBWrapper extends DB
     @Override
     public int commitBulkOperations() {
         long st = System.nanoTime();
-        int res = _db.commitBulkOperations();
+        int opsCompleted = _db.commitBulkOperations();
         long en = System.nanoTime();
-        double timePerOp = ((en - st) / 1000.0) / res;
-        for (int i = 0; i < res; i++) {
-            _measurements.measure("INSERT", Double.valueOf(timePerOp).intValue());
-            _measurements.reportReturnCode("INSERT", 0);
+        if (opsCompleted == _ops.size()) {
+            int timePerOp = Double.valueOf(((en - st) / 1000.0) / _ops.size()).intValue();
+            for (String op: _ops) {
+                _measurements.measure(op, timePerOp);
+                _measurements.reportReturnCode(op, 0);
+            }
+            _ops.clear();
+            return opsCompleted;
         }
-        return res;
+        return 0;
     }
 }

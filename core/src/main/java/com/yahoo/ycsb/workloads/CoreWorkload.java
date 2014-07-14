@@ -277,8 +277,8 @@ public class CoreWorkload extends Workload
     int bulkOperations = -1;
 
     int operationsDone;
-	
-	protected static IntegerGenerator getFieldLengthGenerator(Properties p) throws WorkloadException{
+
+    protected static IntegerGenerator getFieldLengthGenerator(Properties p) throws WorkloadException{
 		IntegerGenerator fieldlengthgenerator;
 		String fieldlengthdistribution = p.getProperty(FIELD_LENGTH_DISTRIBUTION_PROPERTY, FIELD_LENGTH_DISTRIBUTION_PROPERTY_DEFAULT);
 		int fieldlength=Integer.parseInt(p.getProperty(FIELD_LENGTH_PROPERTY,FIELD_LENGTH_PROPERTY_DEFAULT));
@@ -424,6 +424,7 @@ public class CoreWorkload extends Workload
 		}
 
         bulkOperations = Integer.parseInt(p.getProperty("bulk", Client.DEFAULT_BULK_OPERATIONS));
+
 	}
 
 	public String buildKeyName(long keynum) {
@@ -481,9 +482,13 @@ public class CoreWorkload extends Workload
 	 * other, and it will be difficult to reach the target throughput. Ideally, this function would have no side
 	 * effects other than DB operations.
 	 */
-	public boolean doTransaction(DB db, Object threadstate, int remainingOps)
+	public boolean doTransaction(DB db, Object threadstate, int opsDone, int nOps)
 	{
 		String op=operationchooser.nextString();
+
+        if (bulkOperations > 0 && opsDone % bulkOperations == 0) {
+            db.initBulkOperations();
+        }
 
 		if (op.compareTo("READ")==0)
 		{
@@ -491,11 +496,11 @@ public class CoreWorkload extends Workload
 		}
 		else if (op.compareTo("UPDATE")==0)
 		{
-			doTransactionUpdate(db, remainingOps);
+			doTransactionUpdate(db);
 		}
 		else if (op.compareTo("INSERT")==0)
 		{
-			doTransactionInsert(db, remainingOps);
+			doTransactionInsert(db);
 		}
 		else if (op.compareTo("SCAN")==0)
 		{
@@ -505,7 +510,20 @@ public class CoreWorkload extends Workload
 		{
 			doTransactionReadModifyWrite(db);
 		}
-		
+
+        if (bulkOperations > 0) {
+            int bucket = opsDone / bulkOperations;
+            int commitAt = (bucket + 1) * bulkOperations;
+            // make sure we cap the max number of operations to ensure we get a final commit
+            if (nOps > 0 && commitAt > nOps) commitAt = nOps;
+
+            opsDone++;
+
+            if (opsDone == commitAt) {
+                db.commitBulkOperations();
+            }
+        }
+
 		return true;
 	}
 
@@ -616,71 +634,28 @@ public class CoreWorkload extends Workload
 		db.scan(table,startkeyname,len,fields,new Vector<HashMap<String,ByteIterator>>());
 	}
 
-	public void doTransactionUpdate(DB db, int remainingOps)
+	public void doTransactionUpdate(DB db)
 	{
-        operationsDone = 0;
-        if (bulkOperations <= 0) {
-            //choose a random key
-            int keynum = nextKeynum();
-            String keyname = buildKeyName(keynum);
-            HashMap<String, ByteIterator> values;
-            if (writeallfields) {
-                //new data for all the fields
-                values = buildValues();
-            } else {
-                //update a random field
-                values = buildUpdate();
-            }
-            db.update(table, keyname, values);
+        //choose a random key
+        int keynum = nextKeynum();
+        String keyname = buildKeyName(keynum);
+        HashMap<String, ByteIterator> values;
+        if (writeallfields) {
+            //new data for all the fields
+            values = buildValues();
         } else {
-            int opCount = 0;
-            if (db.initBulkOperations() == 0) {
-                for (int op = 0; op < bulkOperations && op < remainingOps; op++) {
-                    //choose a random key
-                    int keynum = nextKeynum();
-                    String keyname = buildKeyName(keynum);
-                    HashMap<String, ByteIterator> values;
-                    if (writeallfields) {
-                        //new data for all the fields
-                        values = buildValues();
-                    } else {
-                        //update a random field
-                        values = buildUpdate();
-                    }
-                    if (db.update(table, keyname, values) == 0) {
-                        opCount++;
-                    }
-                }
-                operationsDone = db.commitBulkOperations();
-            } else
-                operationsDone = 0;
-
+            //update a random field
+            values = buildUpdate();
         }
+        db.update(table, keyname, values);
 	}
 
-	public void doTransactionInsert(DB db, int remainingOps)
+	public void doTransactionInsert(DB db)
 	{
-        operationsDone = 0;
-        if (bulkOperations <= 0) {
-            int keynum = transactioninsertkeysequence.nextInt();
-            String dbkey = buildKeyName(keynum);
-            HashMap<String, ByteIterator> values = buildValues();
-            if (db.insert(table, dbkey, values) == 0) {
-                operationsDone = 1;
-            }
-        } else {
-            int opCount = 0;
-            if (db.initBulkOperations() == 0) {
-                for (int op = 0; op < bulkOperations && op < remainingOps; op++) {
-                    int keynum = transactioninsertkeysequence.nextInt();
-                    String dbkey = buildKeyName(keynum);
-                    HashMap<String, ByteIterator> values = buildValues();
-                    if (db.insert(table, dbkey, values) == 0) {
-                        opCount++;
-                    }
-                }
-            }
-            operationsDone = db.commitBulkOperations();
-        }
+        //choose the next key
+        int keynum = transactioninsertkeysequence.nextInt();
+        String dbkey = buildKeyName(keynum);
+        HashMap<String, ByteIterator> values = buildValues();
+        db.insert(table, dbkey, values);
 	}
 }
