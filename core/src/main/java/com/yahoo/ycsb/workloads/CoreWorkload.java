@@ -273,6 +273,10 @@ public class CoreWorkload extends Workload
 	boolean orderedinserts;
 
 	int recordcount;
+
+    int bulkOperations = -1;
+
+    int operationsDone;
 	
 	protected static IntegerGenerator getFieldLengthGenerator(Properties p) throws WorkloadException{
 		IntegerGenerator fieldlengthgenerator;
@@ -418,6 +422,8 @@ public class CoreWorkload extends Workload
 		{
 			throw new WorkloadException("Distribution \""+scanlengthdistrib+"\" not allowed for scan length");
 		}
+
+        bulkOperations = Integer.parseInt(p.getProperty("bulk", Client.DEFAULT_BULK_OPERATIONS));
 	}
 
 	public String buildKeyName(long keynum) {
@@ -447,6 +453,11 @@ public class CoreWorkload extends Workload
 		return values;
 	}
 
+    @Override
+    public int getOpsDone() {
+        return operationsDone;
+    }
+
 	/**
 	 * Do one insert operation. Because it will be called concurrently from multiple client threads, this 
 	 * function must be thread safe. However, avoid synchronized, or the threads will block waiting for each 
@@ -470,7 +481,7 @@ public class CoreWorkload extends Workload
 	 * other, and it will be difficult to reach the target throughput. Ideally, this function would have no side
 	 * effects other than DB operations.
 	 */
-	public boolean doTransaction(DB db, Object threadstate)
+	public boolean doTransaction(DB db, Object threadstate, int remainingOps)
 	{
 		String op=operationchooser.nextString();
 
@@ -480,11 +491,11 @@ public class CoreWorkload extends Workload
 		}
 		else if (op.compareTo("UPDATE")==0)
 		{
-			doTransactionUpdate(db);
+			doTransactionUpdate(db, remainingOps);
 		}
 		else if (op.compareTo("INSERT")==0)
 		{
-			doTransactionInsert(db);
+			doTransactionInsert(db, remainingOps);
 		}
 		else if (op.compareTo("SCAN")==0)
 		{
@@ -605,37 +616,71 @@ public class CoreWorkload extends Workload
 		db.scan(table,startkeyname,len,fields,new Vector<HashMap<String,ByteIterator>>());
 	}
 
-	public void doTransactionUpdate(DB db)
+	public void doTransactionUpdate(DB db, int remainingOps)
 	{
-		//choose a random key
-		int keynum = nextKeynum();
+        operationsDone = 0;
+        if (bulkOperations <= 0) {
+            //choose a random key
+            int keynum = nextKeynum();
+            String keyname = buildKeyName(keynum);
+            HashMap<String, ByteIterator> values;
+            if (writeallfields) {
+                //new data for all the fields
+                values = buildValues();
+            } else {
+                //update a random field
+                values = buildUpdate();
+            }
+            db.update(table, keyname, values);
+        } else {
+            int opCount = 0;
+            if (db.initBulkOperations() == 0) {
+                for (int op = 0; op < bulkOperations && op < remainingOps; op++) {
+                    //choose a random key
+                    int keynum = nextKeynum();
+                    String keyname = buildKeyName(keynum);
+                    HashMap<String, ByteIterator> values;
+                    if (writeallfields) {
+                        //new data for all the fields
+                        values = buildValues();
+                    } else {
+                        //update a random field
+                        values = buildUpdate();
+                    }
+                    if (db.update(table, keyname, values) == 0) {
+                        opCount++;
+                    }
+                }
+                operationsDone = db.commitBulkOperations();
+            } else
+                operationsDone = 0;
 
-		String keyname=buildKeyName(keynum);
-
-		HashMap<String,ByteIterator> values;
-
-		if (writeallfields)
-		{
-		   //new data for all the fields
-		   values = buildValues();
-		}
-		else
-		{
-		   //update a random field
-		   values = buildUpdate();
-		}
-
-		db.update(table,keyname,values);
+        }
 	}
 
-	public void doTransactionInsert(DB db)
+	public void doTransactionInsert(DB db, int remainingOps)
 	{
-		//choose the next key
-		int keynum=transactioninsertkeysequence.nextInt();
-
-		String dbkey = buildKeyName(keynum);
-
-		HashMap<String, ByteIterator> values = buildValues();
-		db.insert(table,dbkey,values);
+        operationsDone = 0;
+        if (bulkOperations <= 0) {
+            int keynum = transactioninsertkeysequence.nextInt();
+            String dbkey = buildKeyName(keynum);
+            HashMap<String, ByteIterator> values = buildValues();
+            if (db.insert(table, dbkey, values) == 0) {
+                operationsDone = 1;
+            }
+        } else {
+            int opCount = 0;
+            if (db.initBulkOperations() == 0) {
+                for (int op = 0; op < bulkOperations && op < remainingOps; op++) {
+                    int keynum = transactioninsertkeysequence.nextInt();
+                    String dbkey = buildKeyName(keynum);
+                    HashMap<String, ByteIterator> values = buildValues();
+                    if (db.insert(table, dbkey, values) == 0) {
+                        opCount++;
+                    }
+                }
+            }
+            operationsDone = db.commitBulkOperations();
+        }
 	}
 }

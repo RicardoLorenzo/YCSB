@@ -133,4 +133,19 @@ public class InfinispanClient extends DB {
          return ERROR;
       }
    }
+
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
 }

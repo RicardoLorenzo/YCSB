@@ -234,7 +234,22 @@ public class BasicDB extends DB
 		return 0;
 	}
 
-	/**
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
+    /**
 	 * Short test of BasicDB
 	 */
 	/*

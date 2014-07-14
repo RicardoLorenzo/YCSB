@@ -125,11 +125,16 @@ public class DBWrapper extends DB
 	 */
 	public int update(String table, String key, HashMap<String,ByteIterator> values)
 	{
-		long st=System.nanoTime();
-		int res=_db.update(table,key,values);
-		long en=System.nanoTime();
-		_measurements.measure("UPDATE",(int)((en-st)/1000));
-		_measurements.reportReturnCode("UPDATE",res);
+        int res;
+        if (!_db.isBulkOperations()) {
+            long st = System.nanoTime();
+            res = _db.update(table, key, values);
+            long en = System.nanoTime();
+            _measurements.measure("UPDATE", (int) ((en - st) / 1000));
+            _measurements.reportReturnCode("UPDATE", res);
+        } else {
+            res = _db.update(table, key, values);
+        }
 		return res;
 	}
 
@@ -144,11 +149,17 @@ public class DBWrapper extends DB
 	 */
 	public int insert(String table, String key, HashMap<String,ByteIterator> values)
 	{
-		long st=System.nanoTime();
-		int res=_db.insert(table,key,values);
-		long en=System.nanoTime();
-		_measurements.measure("INSERT",(int)((en-st)/1000));
-		_measurements.reportReturnCode("INSERT",res);
+        int res;
+        if (!_db.isBulkOperations()) {
+            long st = System.nanoTime();
+            res = _db.insert(table, key, values);
+            long en = System.nanoTime();
+            _measurements.measure("INSERT", (int) ((en - st) / 1000));
+            _measurements.reportReturnCode("INSERT", res);
+            return res;
+        } else {
+            res = _db.insert(table, key, values);
+        }
 		return res;
 	}
 
@@ -161,11 +172,39 @@ public class DBWrapper extends DB
 	 */
 	public int delete(String table, String key)
 	{
-		long st=System.nanoTime();
-		int res=_db.delete(table,key);
-		long en=System.nanoTime();
-		_measurements.measure("DELETE",(int)((en-st)/1000));
-		_measurements.reportReturnCode("DELETE",res);
+        int res;
+        if (!_db.isBulkOperations()) {
+            long st = System.nanoTime();
+            res = _db.delete(table, key);
+            long en = System.nanoTime();
+            _measurements.measure("DELETE", (int) ((en - st) / 1000));
+            _measurements.reportReturnCode("DELETE", res);
+        } else {
+            res = _db.delete(table, key);
+        }
 		return res;
 	}
+
+    @Override
+    public boolean isBulkOperations() {
+        return _db.isBulkOperations();
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return _db.initBulkOperations();
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        long st = System.nanoTime();
+        int res = _db.commitBulkOperations();
+        long en = System.nanoTime();
+        double timePerOp = ((en - st) / 1000.0) / res;
+        for (int i = 0; i < res; i++) {
+            _measurements.measure("INSERT", Double.valueOf(timePerOp).intValue());
+            _measurements.reportReturnCode("INSERT", 0);
+        }
+        return res;
+    }
 }

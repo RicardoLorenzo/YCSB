@@ -139,6 +139,7 @@ class ClientThread extends Thread
 {
 	DB _db;
 	boolean _dotransactions;
+    boolean _dobulkoperations;
 	Workload _workload;
 	int _opcount;
 	double _target;
@@ -155,18 +156,20 @@ class ClientThread extends Thread
 	 * 
 	 * @param db the DB implementation to use
 	 * @param dotransactions true to do transactions, false to insert data
-	 * @param workload the workload to use
+	 * @param dobulkoperations true to do transactions, false to insert data
+     * @param workload the workload to use
 	 * @param threadid the id of this thread 
 	 * @param threadcount the total number of threads 
 	 * @param props the properties defining the experiment
 	 * @param opcount the number of operations (transactions or inserts) to do
 	 * @param targetperthreadperms target number of operations per thread per ms
 	 */
-	public ClientThread(DB db, boolean dotransactions, Workload workload, int threadid, int threadcount, Properties props, int opcount, double targetperthreadperms)
+	public ClientThread(DB db, boolean dotransactions, boolean dobulkoperations, Workload workload, int threadid, int threadcount, Properties props, int opcount, double targetperthreadperms)
 	{
 		//TODO: consider removing threadcount and threadid
 		_db=db;
 		_dotransactions=dotransactions;
+        _dobulkoperations=dobulkoperations;
 		_workload=workload;
 		_opcount=opcount;
 		_opsdone=0;
@@ -229,13 +232,10 @@ class ClientThread extends Thread
 
 				while (((_opcount == 0) || (_opsdone < _opcount)) && !_workload.isStopRequested())
 				{
-
-					if (!_workload.doTransaction(_db,_workloadstate))
-					{
-						break;
-					}
-
-					_opsdone++;
+                    if (!_workload.doTransaction(_db, _workloadstate, (_opcount - _opsdone))) {
+                        break;
+                    }
+                    _opsdone += _workload.getOpsDone();
 
 					//throttle the operations
 					if (_target>0)
@@ -265,13 +265,10 @@ class ClientThread extends Thread
 
 				while (((_opcount == 0) || (_opsdone < _opcount)) && !_workload.isStopRequested())
 				{
-
-					if (!_workload.doInsert(_db,_workloadstate))
-					{
-						break;
-					}
-
-					_opsdone++;
+                    if (!_workload.doInsert(_db, _workloadstate)) {
+                        break;
+                    }
+                    _opsdone += _workload.getOpsDone();
 
 					//throttle the operations
 					if (_target>0)
@@ -326,6 +323,8 @@ public class Client
 	public static final String RECORD_COUNT_PROPERTY="recordcount";
 
 	public static final String WORKLOAD_PROPERTY="workload";
+
+    public static final String DEFAULT_BULK_OPERATIONS="1000";
 	
 	/**
 	 * Indicates how many inserts to do, if less than recordcount. Useful for partitioning
@@ -357,7 +356,8 @@ public class Client
 		System.out.println("                  multiple properties can be specified, and override any");
 		System.out.println("                  values in the propertyfile");
 		System.out.println("  -s:  show status during run (default: no status)");
-		System.out.println("  -l label:  use label for status (e.g. to label one experiment out of a whole batch)");
+        System.out.println("  -bulk n:  perform n operations in one multiple bulk operation");
+        System.out.println("  -l label:  use label for status (e.g. to label one experiment out of a whole batch)");
 		System.out.println("");
 		System.out.println("Required properties:");
 		System.out.println("  "+WORKLOAD_PROPERTY+": the name of the workload class to use (e.g. com.yahoo.ycsb.workloads.CoreWorkload)");
@@ -435,6 +435,7 @@ public class Client
 		Properties props=new Properties();
 		Properties fileprops=new Properties();
 		boolean dotransactions=true;
+        boolean dobulkoperations=false;
 		int threadcount=1;
 		int target=0;
 		boolean status=false;
@@ -480,6 +481,24 @@ public class Client
 				dotransactions=false;
 				argindex++;
 			}
+            else if (args[argindex].compareTo("-bulk")==0)
+            {
+                argindex++;
+                if (argindex>=args.length)
+                {
+                    usageMessage();
+                    System.exit(0);
+                }
+                try {
+                    Integer.parseInt(args[argindex]);
+                    props.setProperty("bulk",args[argindex]);
+                    dobulkoperations=true;
+                } catch(NumberFormatException e) {
+                    usageMessage();
+                    System.exit(0);
+                }
+                argindex++;
+            }
 			else if (args[argindex].compareTo("-t")==0)
 			{
 				dotransactions=true;
@@ -718,7 +737,7 @@ public class Client
 				System.exit(0);
 			}
 
-			Thread t=new ClientThread(db,dotransactions,workload,threadid,threadcount,props,opcount/threadcount,targetperthreadperms);
+			Thread t=new ClientThread(db,dotransactions,dobulkoperations,workload,threadid,threadcount,props,opcount/threadcount,targetperthreadperms);
 
 			threads.add(t);
 			//t.start();

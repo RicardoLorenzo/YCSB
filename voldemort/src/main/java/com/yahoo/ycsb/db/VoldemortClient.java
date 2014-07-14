@@ -68,7 +68,22 @@ public class VoldemortClient extends DB {
 			return ERROR;
 	}
 
-	@Override
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
+    @Override
 	public int insert(String table, String key, HashMap<String, ByteIterator> values) {
 		if ( checkStore(table) == ERROR ) {
 			return ERROR;

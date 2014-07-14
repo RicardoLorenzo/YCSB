@@ -270,6 +270,21 @@ public class DynamoDBClient extends DB {
         return OK;
     }
 
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
     private static Map<String, AttributeValue> createAttributes(
             HashMap<String, ByteIterator> values) {
         Map<String, AttributeValue> attributes = new HashMap<String, AttributeValue>(

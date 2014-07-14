@@ -134,4 +134,25 @@ public abstract class DB
 	 * @return Zero on success, a non-zero error code on error.  See this class's description for a discussion of error codes.
 	 */
 	public abstract int delete(String table, String key);
+
+    /**
+     * Check if the operations are performed in bulk mode.
+     *
+     * @return true if it is a bulk operation.
+     */
+    public abstract boolean isBulkOperations();
+
+    /**
+     * Initialize the bulk operations that will be performed using other methods.
+     *
+     * @return Zero on success, a non-zero if the database do not support bulk.
+     */
+    public abstract int initBulkOperations();
+
+    /**
+     * Commit all the operations performed.
+     *
+     * @return Zero on success, a non-zero if there was an error.
+     */
+    public abstract int commitBulkOperations();
 }

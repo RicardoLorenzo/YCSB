@@ -465,4 +465,26 @@ public class JdbcDBClient extends DB implements JdbcDBClientConstants {
       return -1;
     }
 	}
+
+    @Override
+    public boolean isBulkOperations() {
+        /**
+         * TODO
+         */
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        /**
+         * TODO
+         */
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+
+        return 0;
+    }
 }

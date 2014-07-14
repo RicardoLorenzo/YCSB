@@ -108,6 +108,21 @@ public class RedisClient extends DB {
     }
 
     @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
+    @Override
     public int update(String table, String key, HashMap<String, ByteIterator> values) {
         return jedis.hmset(key, StringByteIterator.getStringMap(values)).equals("OK") ? 0 : 1;
     }

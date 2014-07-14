@@ -140,7 +140,22 @@ public class OrientDBClient extends DB {
     return 1;
   }
 
-  @Override
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
+    @Override
   /**
    * Read a record from the database. Each field/value pair from the result will be stored in a HashMap.
    *

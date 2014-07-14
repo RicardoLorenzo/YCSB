@@ -73,6 +73,11 @@ public abstract class Workload
       public void cleanup() throws WorkloadException
       {
       }
+
+    /**
+     * Get the number of operations done.
+     */
+    public abstract int getOpsDone();
       
       /**
        * Do one insert operation. Because it will be called concurrently from multiple client threads, this 
@@ -92,7 +97,7 @@ public abstract class Workload
        * 
        * @return false if the workload knows it is done for this thread. Client will terminate the thread. Return true otherwise. Return true for workloads that rely on operationcount. For workloads that read traces from a file, return true when there are more to do, false when you are done.
        */
-      public abstract boolean doTransaction(DB db, Object threadstate);
+      public abstract boolean doTransaction(DB db, Object threadstate, int remainingOps);
       
       /**
        * Allows scheduling a request to stop the workload.

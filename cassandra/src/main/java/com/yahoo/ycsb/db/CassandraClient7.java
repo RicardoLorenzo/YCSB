@@ -525,7 +525,22 @@ public class CassandraClient7 extends DB
     return Error;
   }
 
-  public static void main(String[] args)
+    @Override
+    public boolean isBulkOperations() {
+        return false;
+    }
+
+    @Override
+    public int initBulkOperations() {
+        return 0;
+    }
+
+    @Override
+    public int commitBulkOperations() {
+        return 0;
+    }
+
+    public static void main(String[] args)
   {
     CassandraClient7 cli = new CassandraClient7();
 
