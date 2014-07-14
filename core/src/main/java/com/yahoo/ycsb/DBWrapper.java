@@ -71,7 +71,7 @@ public class DBWrapper extends DB
     long st=System.nanoTime();
 	_db.cleanup();
     long en=System.nanoTime();
-    _measurements.measure("CLEANUP", (int)((en-st)/1000));
+    _measurements.measure("CLEANUP", (int) ((en - st) / 1000));
 	}
 
 	/**
@@ -214,15 +214,21 @@ public class DBWrapper extends DB
         long st = System.nanoTime();
         int opsCompleted = _db.commitBulkOperations();
         long en = System.nanoTime();
-        if (opsCompleted == _ops.size()) {
-            int timePerOp = Double.valueOf(((en - st) / 1000.0) / _ops.size()).intValue();
-            for (String op: _ops) {
-                _measurements.measure(op, timePerOp);
-                _measurements.reportReturnCode(op, 0);
+        if (opsCompleted > 0) {
+            int timePerOp = Double.valueOf(((en - st) / 1000.0) / opsCompleted).intValue();
+            if (opsCompleted == _ops.size()) {
+                for (String op : _ops) {
+                    _measurements.measure(op, timePerOp);
+                    _measurements.reportReturnCode(op, 0);
+                }
+            } else {
+                for (String op : _ops) {
+                    _measurements.measure("UNKNOWN-BULK-OP", timePerOp);
+                    _measurements.reportReturnCode(op, 0);
+                }
             }
-            _ops.clear();
-            return opsCompleted;
         }
-        return 0;
+        _ops.clear();
+        return opsCompleted;
     }
 }
