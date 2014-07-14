@@ -205,7 +205,7 @@ public class DBWrapper extends DB
         int opsCompleted = _db.commitBulkOperations();
         long en = System.nanoTime();
         long delta = en - st;
-        int timePerOp = Double.valueOf(delta / _ops.size()).intValue();
+        int timePerOp = Double.valueOf((delta / 1000.0) / _ops.size()).intValue();
         for (String op : _ops) {
             _measurements.measure(op, timePerOp);
             _measurements.reportReturnCode(op, 0);
