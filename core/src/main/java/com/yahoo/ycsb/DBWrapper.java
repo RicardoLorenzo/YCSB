@@ -135,6 +135,7 @@ public class DBWrapper extends DB
             _measurements.reportReturnCode("UPDATE", res);
         } else {
             res = _db.update(table, key, values);
+            _measurements.measure("UPDATE", -1);
         }
         _ops.add("UPDATE");
 		return res;
@@ -161,6 +162,7 @@ public class DBWrapper extends DB
             return res;
         } else {
             res = _db.insert(table, key, values);
+            _measurements.measure("INSERT", -1);
         }
         _ops.add("INSERT");
 		return res;
@@ -184,6 +186,7 @@ public class DBWrapper extends DB
             _measurements.reportReturnCode("DELETE", res);
         } else {
             res = _db.delete(table, key);
+            _measurements.measure("DELETE", -1);
         }
         _ops.add("DELETE");
 		return res;
