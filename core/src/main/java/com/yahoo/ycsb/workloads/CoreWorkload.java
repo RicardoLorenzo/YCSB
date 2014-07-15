@@ -423,7 +423,7 @@ public class CoreWorkload extends Workload
 			throw new WorkloadException("Distribution \""+scanlengthdistrib+"\" not allowed for scan length");
 		}
 
-        bulkOperations = Integer.parseInt(p.getProperty("bulk", Client.DEFAULT_BULK_OPERATIONS));
+        bulkOperations = Integer.parseInt(p.getProperty("bulk", "-1"));
 
 	}
 

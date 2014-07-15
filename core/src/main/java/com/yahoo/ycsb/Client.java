@@ -324,9 +324,7 @@ public class Client
 
 	public static final String WORKLOAD_PROPERTY="workload";
 
-    public static final String DEFAULT_BULK_OPERATIONS="1000";
-	
-	/**
+    /**
 	 * Indicates how many inserts to do, if less than recordcount. Useful for partitioning
 	 * the load among multiple servers, if the client is the bottleneck. Additionally, workloads
 	 * should support the "insertstart" property, which tells them which record to start at.
