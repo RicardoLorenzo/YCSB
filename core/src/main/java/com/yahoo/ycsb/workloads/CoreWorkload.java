@@ -368,7 +368,7 @@ public class CoreWorkload extends Workload
 		
 		if (readmodifywriteproportion>0)
 		{
-			operationchooser.addValue(readmodifywriteproportion,"READMODIFYWRITE");
+			operationchooser.addValue(readmodifywriteproportion, "READMODIFYWRITE");
 		}
 
 		transactioninsertkeysequence=new CounterGenerator(recordcount);
@@ -470,15 +470,30 @@ public class CoreWorkload extends Workload
 	 * other, and it will be difficult to reach the target throughput. Ideally, this function would have no side
 	 * effects other than DB operations.
 	 */
-	public boolean doInsert(DB db, Object threadstate)
+	public boolean doInsert(DB db, Object threadstate, int nOps)
 	{
-		int keynum=keysequence.nextInt();
+        State state = (State)threadstate;
+
+        if (bulkOperations > 0 && state.writeOpsDone % bulkOperations == 0) {
+            db.initBulkOperations();
+        }
+
+        int keynum=keysequence.nextInt();
 		String dbkey = buildKeyName(keynum);
 		HashMap<String, ByteIterator> values = buildValues();
-		if (db.insert(table,dbkey,values) == 0)
-			return true;
-		else
-			return false;
+        int result = db.insert(table, dbkey, values);
+
+        state.writeOpsDone++;
+        state.totalOpsDone++;
+
+        if (bulkOperations > 0) {
+            if (state.writeOpsDone % bulkOperations == 0 || state.totalOpsDone == nOps) {
+                db.commitBulkOperations();
+            }
+            return true;
+        } else {
+            return (result == 0);
+        }
 	}
 
 	/**
@@ -523,10 +538,7 @@ public class CoreWorkload extends Workload
         state.totalOpsDone++;
 
         if (bulkOperations > 0) {
-            int bucket = state.writeOpsDone / bulkOperations;
-            int commitAt = (bucket + 1) * bulkOperations;
-
-            if (state.writeOpsDone == commitAt || state.totalOpsDone == nOps) {
+            if (state.writeOpsDone % bulkOperations == 0 || state.totalOpsDone == nOps) {
                 db.commitBulkOperations();
             }
         }
