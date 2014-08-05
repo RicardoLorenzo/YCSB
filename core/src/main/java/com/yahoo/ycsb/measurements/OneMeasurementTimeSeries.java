@@ -17,13 +17,13 @@
 
 package com.yahoo.ycsb.measurements;
 
+import com.yahoo.ycsb.measurements.exporter.MeasurementsExporter;
+
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.Vector;
-
-import com.yahoo.ycsb.measurements.exporter.MeasurementsExporter;
 
 class SeriesUnit
 {
@@ -68,7 +68,9 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 	int min=-1;
 	int max=-1;
 
-	private HashMap<Integer, int[]> returncodes;
+    private HashMap<Integer, int[]> returncodes;
+
+    private MeasurementsExporter exporter;
 	
 	public OneMeasurementTimeSeries(String name, Properties props)
 	{
@@ -76,6 +78,7 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 		_granularity=Integer.parseInt(props.getProperty(GRANULARITY,GRANULARITY_DEFAULT));
 		_measurements=new Vector<SeriesUnit>();
 		returncodes=new HashMap<Integer,int[]>();
+        exporter = Measurements.getMeasurementsExporter();
 	}
 	
 	void checkEndOfUnit(boolean forceend)
@@ -99,6 +102,15 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 			
 			count=0;
 			sum=0;
+
+            if(exporter != null) {
+                try {
+                    exporter.write(getName(), Long.toString(unit), avg);
+                } catch(IOException e) {
+                    System.err.println("Cannot write measurement.");
+                    e.printStackTrace();
+                }
+            }
 		}
 	}
 	

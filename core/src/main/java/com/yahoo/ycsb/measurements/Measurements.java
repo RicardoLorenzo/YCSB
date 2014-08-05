@@ -17,11 +17,12 @@
 
 package com.yahoo.ycsb.measurements;
 
+import com.yahoo.ycsb.measurements.exporter.MeasurementsExporter;
+import com.yahoo.ycsb.measurements.exporter.MeasurementsExporterFactory;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Properties;
-
-import com.yahoo.ycsb.measurements.exporter.MeasurementsExporter;
 
 /**
  * Collects latency measurements, and reports them when requested.
@@ -35,9 +36,15 @@ public class Measurements
 
 	private static final String MEASUREMENT_TYPE_DEFAULT = "histogram";
 
+    public static final String MEASUREMENT_OUTPUT = "measurementoutput";
+
+    public static final String MEASUREMENT_OUTPUT_LIVE = "live";
+
 	static Measurements singleton=null;
 	
 	static Properties measurementproperties=null;
+
+    static MeasurementsExporter exporter = null;
 	
 	public static void setProperties(Properties props)
 	{
@@ -78,7 +85,16 @@ public class Measurements
 		{
 			histogram=false;
 		}
+
+        if(props.containsKey(Measurements.MEASUREMENT_OUTPUT) && props.getProperty(Measurements.MEASUREMENT_OUTPUT).equalsIgnoreCase(Measurements.MEASUREMENT_OUTPUT_LIVE)) {
+            exporter = MeasurementsExporterFactory.getInstance(props);
+        }
+
 	}
+
+    public static MeasurementsExporter getMeasurementsExporter() {
+        return exporter;
+    }
 	
 	OneMeasurement constructOneMeasurement(String name)
 	{

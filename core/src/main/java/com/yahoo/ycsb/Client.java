@@ -18,13 +18,16 @@
 package com.yahoo.ycsb;
 
 
-import java.io.*;
-import java.text.DecimalFormat;
-import java.util.*;
-
 import com.yahoo.ycsb.measurements.Measurements;
 import com.yahoo.ycsb.measurements.exporter.MeasurementsExporter;
-import com.yahoo.ycsb.measurements.exporter.TextMeasurementsExporter;
+import com.yahoo.ycsb.measurements.exporter.MeasurementsExporterFactory;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.Enumeration;
+import java.util.Properties;
+import java.util.Vector;
 
 //import org.apache.log4j.BasicConfigurator;
 
@@ -390,35 +393,15 @@ public class Client
 		MeasurementsExporter exporter = null;
 		try
 		{
-			// if no destination file is provided the results will be written to stdout
-			OutputStream out;
-			String exportFile = props.getProperty("exportfile");
-			if (exportFile == null)
-			{
-				out = System.out;
-			} else
-			{
-				out = new FileOutputStream(exportFile);
-			}
-
-			// if no exporter is provided the default text one will be used
-			String exporterStr = props.getProperty("exporter", "com.yahoo.ycsb.measurements.exporter.TextMeasurementsExporter");
-			try
-			{
-				exporter = (MeasurementsExporter) Class.forName(exporterStr).getConstructor(OutputStream.class).newInstance(out);
-			} catch (Exception e)
-			{
-				System.err.println("Could not find exporter " + exporterStr
-						+ ", will use default text reporter.");
-				e.printStackTrace();
-				exporter = new TextMeasurementsExporter(out);
-			}
+            exporter = MeasurementsExporterFactory.getInstance(props);
 
 			exporter.write("OVERALL", "RunTime(ms)", runtime);
 			double throughput = 1000.0 * ((double) opcount) / ((double) runtime);
 			exporter.write("OVERALL", "Throughput(ops/sec)", throughput);
 
-			Measurements.getMeasurements().exportMeasurements(exporter);
+			if(!props.containsKey(Measurements.MEASUREMENT_OUTPUT) || !props.getProperty(Measurements.MEASUREMENT_OUTPUT).equalsIgnoreCase(Measurements.MEASUREMENT_OUTPUT_LIVE)) {
+                Measurements.getMeasurements().exportMeasurements(exporter);
+            }
 		} finally
 		{
 			if (exporter != null)
