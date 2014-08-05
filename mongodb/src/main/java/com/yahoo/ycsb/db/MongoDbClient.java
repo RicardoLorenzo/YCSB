@@ -194,12 +194,14 @@ public class MongoDbClient extends DB {
     @Override
     public int commitBulkOperations() {
         int opCount = 0;
-        BulkWriteResult result = operation.execute();
-        opCount += result.getInsertedCount();
-        if(result.isModifiedCountAvailable()) {
-            opCount += result.getModifiedCount();
+        if (operation != null) {
+            BulkWriteResult result = operation.execute();
+            opCount += result.getInsertedCount();
+            if(result.isModifiedCountAvailable()) {
+                opCount += result.getModifiedCount();
+            }
+            opCount += result.getRemovedCount();
         }
-        opCount += result.getRemovedCount();
         return opCount;
     }
 
