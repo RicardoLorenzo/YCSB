@@ -397,9 +397,7 @@ public class Client
 			double throughput = 1000.0 * ((double) opcount) / ((double) runtime);
 			exporter.write("OVERALL", "Throughput(ops/sec)", throughput);
 
-			if(!props.containsKey(Measurements.MEASUREMENT_OUTPUT) || !props.getProperty(Measurements.MEASUREMENT_OUTPUT).equalsIgnoreCase(Measurements.MEASUREMENT_OUTPUT_LIVE)) {
-                Measurements.getMeasurements().exportMeasurements(exporter);
-            }
+            Measurements.getMeasurements().exportMeasurements(exporter);
 		} finally
 		{
 			if (exporter != null)

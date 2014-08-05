@@ -6,11 +6,14 @@ import java.io.OutputStream;
 import java.util.Properties;
 
 /**
- * Created by ricardolorenzo on 05/08/2014.
+ * Instantiate an exporter
+ *
+ * @author Ricardo Lorenzo
  */
 public class MeasurementsExporterFactory {
+
     public static MeasurementsExporter getInstance(Properties props) {
-        MeasurementsExporter exporter = null;
+        MeasurementsExporter exporter;
         // if no destination file is provided the results will be written to stdout
         OutputStream out;
         String exportFile = props.getProperty("exportfile");
@@ -29,7 +32,7 @@ public class MeasurementsExporterFactory {
         String exporterStr = props.getProperty("exporter", "com.yahoo.ycsb.measurements.exporter.TextMeasurementsExporter");
         try
         {
-            exporter = (MeasurementsExporter) Class.forName(exporterStr).getConstructor(OutputStream.class).newInstance(out);
+            exporter = MeasurementsExporter.class.cast(Class.forName(exporterStr).getConstructor(OutputStream.class).newInstance(out));
         } catch (Exception e)
         {
             System.err.println("Could not find exporter " + exporterStr
@@ -37,6 +40,6 @@ public class MeasurementsExporterFactory {
             e.printStackTrace();
             exporter = new TextMeasurementsExporter(out);
         }
-        return null;
+        return exporter;
     }
 }

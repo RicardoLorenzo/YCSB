@@ -31,20 +31,29 @@ public class TextMeasurementsExporter implements MeasurementsExporter
 
   public TextMeasurementsExporter(OutputStream os)
   {
-    this.bw = new BufferedWriter(new OutputStreamWriter(os));
+      this.bw = new BufferedWriter(new OutputStreamWriter(os));
   }
 
   public void write(String metric, String measurement, int i) throws IOException
   {
     bw.write("[" + metric + "], " + measurement + ", " + i);
     bw.newLine();
+    bw.flush();
   }
 
   public void write(String metric, String measurement, double d) throws IOException
   {
     bw.write("[" + metric + "], " + measurement + ", " + d);
     bw.newLine();
+    bw.flush();
   }
+
+    public void write(String metric, String measurement, double d, int c) throws IOException
+    {
+        bw.write("[" + metric + "], " + measurement + ", " + d + ", " + c);
+        bw.newLine();
+        bw.flush();
+    }
 
   public void close() throws IOException
   {

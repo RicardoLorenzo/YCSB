@@ -79,7 +79,7 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 		_measurements=new Vector<SeriesUnit>();
 		returncodes=new HashMap<Integer,int[]>();
         exporter = Measurements.getMeasurementsExporter();
-	}
+    }
 	
 	void checkEndOfUnit(boolean forceend)
 	{
@@ -92,25 +92,25 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 		}
 		
 		long unit=((now-start)/_granularity)*_granularity;
-		
-		if ( (unit>currentunit) || (forceend) )
+
+        if ( (unit>currentunit) || (forceend) )
 		{
 			double avg=(count == 0 ? 0 : ((double)sum)/((double)count));
 			_measurements.add(new SeriesUnit(currentunit,avg));
 			
 			currentunit=unit;
 			
-			count=0;
-			sum=0;
-
-            if(exporter != null) {
+			if(exporter != null) {
                 try {
-                    exporter.write(getName(), Long.toString(unit), avg);
+                    exporter.write(getName(), Long.toString(unit), avg, count);
                 } catch(IOException e) {
                     System.err.println("Cannot write measurement.");
                     e.printStackTrace();
                 }
             }
+
+            count=0;
+            sum=0;
 		}
 	}
 	
@@ -156,12 +156,18 @@ public class OneMeasurementTimeSeries extends OneMeasurement
     {
       int[] val=returncodes.get(I);
       exporter.write(getName(), "Return="+I, val[0]);
-    }     
-
-    for (SeriesUnit unit : _measurements)
-    {
-      exporter.write(getName(), Long.toString(unit.time), unit.average);
     }
+
+    if(this.exporter == null) {
+        for (SeriesUnit unit : _measurements)
+        {
+            exporter.write(getName(), Long.toString(unit.time), unit.average);
+        }
+    } else {
+        SeriesUnit unit = _measurements.lastElement();
+        this.exporter.write(getName(), Long.toString(unit.time), unit.average);
+    }
+
   }
 	
 	@Override
