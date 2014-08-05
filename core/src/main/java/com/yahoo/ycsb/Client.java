@@ -232,10 +232,10 @@ class ClientThread extends Thread
 
 				while (((_opcount == 0) || (_opsdone < _opcount)) && !_workload.isStopRequested())
 				{
-                    if (!_workload.doTransaction(_db, _workloadstate, (_opcount - _opsdone))) {
+                    if (!_workload.doTransaction(_db, _workloadstate, _opcount)) {
                         break;
                     }
-                    _opsdone += _workload.getOpsDone();
+                    _opsdone++;
 
 					//throttle the operations
 					if (_target>0)
@@ -265,10 +265,10 @@ class ClientThread extends Thread
 
 				while (((_opcount == 0) || (_opsdone < _opcount)) && !_workload.isStopRequested())
 				{
-                    if (!_workload.doInsert(_db, _workloadstate)) {
+                    if (!_workload.doInsert(_db, _workloadstate, _opcount)) {
                         break;
                     }
-                    _opsdone += _workload.getOpsDone();
+                    _opsdone++;
 
 					//throttle the operations
 					if (_target>0)
@@ -324,9 +324,7 @@ public class Client
 
 	public static final String WORKLOAD_PROPERTY="workload";
 
-    public static final String DEFAULT_BULK_OPERATIONS="1000";
-	
-	/**
+    /**
 	 * Indicates how many inserts to do, if less than recordcount. Useful for partitioning
 	 * the load among multiple servers, if the client is the bottleneck. Additionally, workloads
 	 * should support the "insertstart" property, which tells them which record to start at.
