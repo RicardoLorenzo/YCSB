@@ -86,6 +86,8 @@ public class OneMeasurementHistogram extends OneMeasurement
 	 */
 	public synchronized void measure(int latency)
 	{
+        if (latency < 0) return;
+
 		if (latency/1000>=_buckets)
 		{
 			histogramoverflow++;

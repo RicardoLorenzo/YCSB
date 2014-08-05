@@ -95,7 +95,7 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 		
 		if ( (unit>currentunit) || (forceend) )
 		{
-			double avg=((double)sum)/((double)count);
+			double avg=(count == 0 ? 0 : ((double)sum)/((double)count));
 			_measurements.add(new SeriesUnit(currentunit,avg));
 			
 			currentunit=unit;
@@ -119,9 +119,11 @@ public class OneMeasurementTimeSeries extends OneMeasurement
 	{
 		checkEndOfUnit(false);
 		
-		count++;
-		sum+=latency;
-		totallatency+=latency;
+        if (latency < 0) return;
+
+        count++;
+        sum+=latency;
+        totallatency+=latency;
 		operations++;
 		windowoperations++;
 		windowtotallatency+=latency;
