@@ -165,7 +165,7 @@ public class OneMeasurementTimeSeries extends OneMeasurement
         }
     } else {
         SeriesUnit unit = _measurements.lastElement();
-        this.exporter.write(getName(), Long.toString(unit.time), unit.average);
+        this.exporter.write(getName(), Long.toString(unit.time + _granularity), unit.average);
     }
 
   }
